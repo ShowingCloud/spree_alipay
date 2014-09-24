@@ -23,7 +23,7 @@ using_direct_pay_service = alipay.preferred_using_direct_pay_service
   <% service.price @order.item_total %>
   <% service.quantity 1 %>
   <% service.logistics :type=> 'EXPRESS', :fee=>@order.adjustment_total, :payment=>'BUYER_PAY'  %>
-  <% service.service ActiveMerchant::Billing::Integrations::Alipay::Helper::TRADE_CREATE_BY_BUYER %>
+  <% service.service ActiveMerchant::Billing::Integrations::Alipay::Helper::CREATE_PARTNER_TRADE_BY_BUYER %>
 <% end %>
   <% service.seller :email => alipay.preferred_email %>
   <% service.notify_url url_for(:only_path => false, :action => 'alipay_notify') %>

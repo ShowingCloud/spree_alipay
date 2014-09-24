@@ -118,7 +118,7 @@ Rails.logger.debug "--->before handle_billing_integration"
         helper.price order.item_total
         helper.quantity 1
         helper.logistics :type=> 'EXPRESS', :fee=>order.adjustment_total, :payment=>'BUYER_PAY' 
-        helper.service ActiveMerchant::Billing::Integrations::Alipay::Helper::TRADE_CREATE_BY_BUYER
+        helper.service ActiveMerchant::Billing::Integrations::Alipay::Helper::CREATE_PARTNER_TRADE_BY_BUYER
       end
       helper.seller :email => alipay.preferred_email
       #url_for is controller instance method, so we have to keep this method in controller instead of model
