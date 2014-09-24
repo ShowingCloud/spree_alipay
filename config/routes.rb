@@ -11,7 +11,7 @@ Spree::Core::Engine.add_routes do
 
   # Add your extension routes here
   get '/alipay_checkout/done/', :to => 'checkout#alipay_done', :as => :alipay_done
-  get '/alipay_checkout/notify/', :to => 'checkout#alipay_notify', :as => :alipay_notify
+  post '/alipay_checkout/notify/', :to => 'checkout#alipay_notify', :as => :alipay_notify
 
   #fix issue
   #https://github.com/spree/spree_auth_devise/commit/bab2593f75909feeed3f53b54a63c2edd25f7ba5
