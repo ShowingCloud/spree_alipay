@@ -29,11 +29,13 @@ module Spree
     def alipay_notify
       notification = ActiveMerchant::Billing::Integrations::Alipay::Notification.new(request.raw_post)
       retrieve_order(notification.out_trade_no)
-      if @order.present? and notification.acknowledge() and valid_alipay_notification?(notification,@order.payments.first.payment_method.preferred_partner)
+      if @order.present? and notification.acknowledge() and valid_alipay_notification?(notification, ActiveMerchant::Billing::Integrations::Alipay::ACCOUNT)
         if notification.complete?
-          @order.payment.first.complete!
-        else
-          @order.payment.first.failure!
+          @order.payments.where(:state => ['processing', 'pending', 'checkout']).first.complete!
+          @order.state = 'complete'
+          @order.finalize!
+        elsif notification.failed?
+          @order.payments.where(:state => ['processing']).first.failure!
         end
         render text: "success" 
       else
@@ -108,7 +110,7 @@ Rails.logger.debug "--->before handle_billing_integration"
     def aplipay_full_service_url( order, alipay)
       raise ArgumentError, 'require Spree::BillingIntegration::Alipay' unless alipay.is_a? Spree::BillingIntegration::Alipay
       url = ActiveMerchant::Billing::Integrations::Alipay.service_url+'?'
-      helper = ActiveMerchant::Billing::Integrations::Alipay::Helper.new(order.number, alipay.preferred_partner)
+      helper = ActiveMerchant::Billing::Integrations::Alipay::Helper.new(order.number, ActiveMerchant::Billing::Integrations::Alipay::ACCOUNT)
       using_direct_pay_service = alipay.preferred_using_direct_pay_service
 
       if using_direct_pay_service
@@ -120,7 +122,7 @@ Rails.logger.debug "--->before handle_billing_integration"
         helper.logistics :type=> 'EXPRESS', :fee=>order.adjustment_total, :payment=>'BUYER_PAY' 
         helper.service ActiveMerchant::Billing::Integrations::Alipay::Helper::CREATE_PARTNER_TRADE_BY_BUYER
       end
-      helper.seller :email => alipay.preferred_email
+      helper.seller :email => ActiveMerchant::Billing::Integrations::Alipay::EMAIL
       #url_for is controller instance method, so we have to keep this method in controller instead of model
       helper.notify_url url_for(:only_path => false, :action => 'alipay_notify')
       helper.return_url url_for(:only_path => false, :action => 'alipay_done')
@@ -154,7 +156,7 @@ Rails.logger.debug "--->before handle_billing_integration"
         # TODO fork the activemerchant_patch_for_china, change constant to class variable
         alipay_helper_klass = ActiveMerchant::Billing::Integrations::Alipay::Helper
         alipay_helper_klass.send(:remove_const, :KEY) if alipay_helper_klass.const_defined?(:KEY)
-        alipay_helper_klass.const_set(:KEY, payment_method.preferred_sign)
+        alipay_helper_klass.const_set(:KEY, ActiveMerchant::Billing::Integrations::Alipay::KEY)
 
         #redirect_to(alipay_checkout_payment_order_checkout_url(@order, :payment_method_id => payment_method.id))
         redirect_to aplipay_full_service_url(@order, payment_method)
