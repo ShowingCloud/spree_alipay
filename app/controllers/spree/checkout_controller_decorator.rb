@@ -8,13 +8,14 @@ module Spree
     skip_before_filter :verify_authenticity_token, :only => self.skip_payment_methods
     # these two filters is from spree_auth_devise
     skip_before_filter :check_registration, :check_authorization, :only=> self.skip_payment_methods
+    skip_before_filter *_process_action_callbacks.map(&:filter), :only => :alipay_notify
 
     def alipay_done
       payment_return = ActiveMerchant::Billing::Integrations::Alipay::Return.new(request.query_string)
       #TODO check payment_return.success
       retrieve_order(payment_return.order)
 #      Rails.logger.info "payment_return=#{payment_return.inspect}"
-      if @order.present?
+      if @order.present? and payment_return.success?
         @order.payments.where(:state => ['processing', 'pending', 'checkout']).first.complete!
         @order.state='complete'
         @order.finalize!
@@ -31,7 +32,7 @@ module Spree
       retrieve_order(notification.out_trade_no)
       if @order.present? and notification.acknowledge() and valid_alipay_notification?(notification, ActiveMerchant::Billing::Integrations::Alipay::ACCOUNT)
         if notification.complete?
-          @order.payments.where(:state => ['processing', 'pending', 'checkout']).first.complete!
+          @order.payments.where(:state => ['processing', 'pending', 'checkout', 'completed']).first.complete!
           @order.state = 'complete'
           @order.finalize!
         elsif notification.failed?
